@@ -1,61 +1,61 @@
 name: Deploy
 
 on:
-    push:
-        branches:
-            - deploy
+  push:
+    branches:
+      - deploy
 
 jobs:
-    deploy:
-        name: Deploy
-        runs-on: ubuntu-latest
-        steps:
-            - name: Checkout Code
-              uses: actions/checkout@v4
+  deploy:
+    name: Deploy
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
 
-	          - name: Setup Node.js
-              uses: actions/setup-node@v4
-              with:
-          	    node-version: 20
-          	    cache: 'npm'
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: "npm"
 
-      	    - name: Install dependencies
-              run: npm ci
+      - name: Install dependencies
+        run: npm ci
 
-            - name: Run Angular unit tests
-              run: npm test -- --watch=false --browsers=ChromeHeadless
+      - name: Run Angular unit tests
+        run: npm test -- --watch=false --browsers=ChromeHeadless
 
-            - name: Configurar credenciales de AWS
-              uses: aws-actions/configure-aws-credentials@v4
-              with:
-                  aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-                  aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-                  aws-session-token: ${{ secrets.AWS_SESSION_TOKEN }}
-                  aws-region: ${{ secrets.AWS_REGION }}
+      - name: Configurar credenciales de AWS
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-session-token: ${{ secrets.AWS_SESSION_TOKEN }}
+          aws-region: ${{ secrets.AWS_REGION }}
 
-            - name: Iniciar sesión en Amazon ECR
-              id: login-ecr
-              uses: aws-actions/amazon-ecr-login@v2
+      - name: Iniciar sesión en Amazon ECR
+        id: login-ecr
+        uses: aws-actions/amazon-ecr-login@v2
 
-            - name: Construir y subir imagen Docker a ECR
-              env:
-                  ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
-                  ECR_REPOSITORY: casino/frontend
-                  IMAGE_TAG: ${{ github.sha }}
-              run: |
-                  docker build -t $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG \
-                               -t $ECR_REGISTRY/$ECR_REPOSITORY:latest \
-                               -t $ECR_REGISTRY/$ECR_REPOSITORY:v1.0.0 .
-                  docker push $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
-                  docker push $ECR_REGISTRY/$ECR_REPOSITORY:latest
-                  docker push $ECR_REGISTRY/$ECR_REPOSITORY:v1.0.0
+      - name: Construir y subir imagen Docker a ECR
+        env:
+          ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
+          ECR_REPOSITORY: casino/frontend
+          IMAGE_TAG: ${{ github.sha }}
+        run: |
+          docker build -t $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG \
+                       -t $ECR_REGISTRY/$ECR_REPOSITORY:latest \
+                       -t $ECR_REGISTRY/$ECR_REPOSITORY:v1.0.0 .
+          docker push $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
+          docker push $ECR_REGISTRY/$ECR_REPOSITORY:latest
+          docker push $ECR_REGISTRY/$ECR_REPOSITORY:v1.0.0
 
-            - name: COnfigurar kubectl
-              run: |
-                  aws eks update-kubeconfig --name ${{ secrets.EKS_CLUSTER }} --region ${{ secrets.AWS_REGION }}
+      - name: COnfigurar kubectl
+        run: |
+          aws eks update-kubeconfig --name ${{ secrets.EKS_CLUSTER }} --region ${{ secrets.AWS_REGION }}
 
-            - name: Subir a EKS
-              run: |
-                  kubectl get namespace vidalcasino || kubectl create namespace vidalcasino
-                  kubectl apply -f k8s/
-                  kubectl rollout status deployment/casino-frontend -n vidalcasino
+      - name: Subir a EKS
+        run: |
+          kubectl get namespace vidalcasino || kubectl create namespace vidalcasino
+          kubectl apply -f k8s/
+          kubectl rollout status deployment/casino-frontend -n vidalcasino
