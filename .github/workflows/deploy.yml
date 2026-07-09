@@ -1,14 +1,13 @@
-name: Deploy
+name: deploy
 
 on:
   push:
     branches:
       - deploy
-
 jobs:
   deploy:
-    name: Deploy
     runs-on: ubuntu-latest
+
     steps:
       - name: Checkout Code
         uses: actions/checkout@v4
@@ -31,7 +30,7 @@ jobs:
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           aws-session-token: ${{ secrets.AWS_SESSION_TOKEN }}
-          aws-region: ${{ secrets.AWS_REGION }}
+          aws-region: ${{ vars.AWS_REGION }}
 
       - name: Iniciar sesión en Amazon ECR
         id: login-ecr
@@ -52,10 +51,9 @@ jobs:
 
       - name: COnfigurar kubectl
         run: |
-          aws eks update-kubeconfig --name ${{ secrets.EKS_CLUSTER }} --region ${{ secrets.AWS_REGION }}
-
+          aws eks update-kubeconfig --region ${{ vars.AWS_REGION }} --name ${{ secrets.EKS_CLUSTER }}
       - name: Subir a EKS
         run: |
           kubectl get namespace vidalcasino || kubectl create namespace vidalcasino
           kubectl apply -f k8s/
-          kubectl rollout status deployment/casino-frontend -n vidalcasino
+          kubectl rollout status deployment/casino-backend -n vidalcasino
