@@ -52,19 +52,8 @@ jobs:
       - name: COnfigurar kubectl
         run: |
           aws eks update-kubeconfig --region ${{ vars.AWS_REGION }} --name ${{ secrets.EKS_CLUSTER }}
-
       - name: Subir a EKS
         run: |
-          kubectl apply -f k8s/deployment.yaml
-          kubectl set image deployment/casino-frontend-deployment casino-frontend=$IMAGE_PATH
-          kubectl apply -f casino-frontend-lb.yaml
-          kubectl apply -f k8s/hpa.yaml
-          kubectl rollout status deployment/casino-frontend-deployment --timeout=5m || {
-            kubectl get deployment casino-frontend-deployment -o wide
-            kubectl get rs -l app=casino-frontend -o wide
-            kubectl get pods -l app=casino-frontend -o wide
-            kubectl describe pod -l app=casino-frontend
-            kubectl describe deployment casino-frontend-deployment
-            kubectl get events --sort-by=.lastTimestamp | tail -n 20
-            exit 1
-          }
+          kubectl get namespace vidalcasino || kubectl create namespace vidalcasino
+          kubectl apply -f k8s/
+          kubectl rollout status deployment/casino-backend -n vidalcasino
